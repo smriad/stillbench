@@ -4,6 +4,7 @@ import { benches, chooseBench, chooseNearest, eligibleBenches } from "./benches.
 import { briefPrompt, cleanBrief, composeBrief } from "./compose-brief.ts";
 import { explainBenchChoice } from "./bench-pick.ts";
 import { homeHeadline, HOME_PURPOSE } from "./home-copy.ts";
+import { gemmaInferenceReady, ollamaApiKey } from "./ollama-env.ts";
 import { formatSitStory } from "./sit-story.ts";
 import { noticePrompt, sanitizeDedication } from "./meaning.ts";
 import { afterSitLine, checkInText, companionLine, parseNeed, sitPlan } from "./need.ts";
@@ -520,4 +521,20 @@ test("Tinker chat body uses a boolean reasoning_effort Qwen 3.5 accepts", () => 
     tinkerErrorNote(400, JSON.stringify({ detail: "reasoning_effort is not supported for model x. This model accepts true or false." })),
     /accepts true or false/,
   );
+});
+
+test("blank OLLAMA_API_KEY counts as missing on remote hosts", () => {
+  const prior = process.env.OLLAMA_API_KEY;
+  const priorUrl = process.env.OLLAMA_BASE_URL;
+  process.env.OLLAMA_BASE_URL = "https://openrouter.ai/api/v1";
+  process.env.OLLAMA_API_KEY = "   ";
+  assert.equal(ollamaApiKey(), undefined);
+  assert.equal(gemmaInferenceReady(), false);
+  process.env.OLLAMA_API_KEY = "sk-test";
+  assert.equal(ollamaApiKey(), "sk-test");
+  assert.equal(gemmaInferenceReady(), true);
+  if (prior === undefined) delete process.env.OLLAMA_API_KEY;
+  else process.env.OLLAMA_API_KEY = prior;
+  if (priorUrl === undefined) delete process.env.OLLAMA_BASE_URL;
+  else process.env.OLLAMA_BASE_URL = priorUrl;
 });

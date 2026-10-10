@@ -9,6 +9,7 @@ import {
   type PastNote,
 } from "./compose-brief";
 import { recordHealth } from "./health";
+import { gemmaInferenceReady, ollamaModelId } from "./ollama-env";
 import { TINKER_OAI, tinkerChatBody, tinkerErrorNote, tinkerReplyText } from "./tinker-oai";
 import { traced } from "./trace";
 
@@ -26,9 +27,12 @@ function withTimeout<T>(work: Promise<T>, label: string) {
 type DraftBrief = { raw: string; model: string };
 
 async function gemmaBrief(prompt: string): Promise<DraftBrief> {
+  if (!gemmaInferenceReady()) {
+    throw new Error("Gemma host is remote but OLLAMA_API_KEY is not set.");
+  }
   const agent: Agent = mastra.getAgentById("stillbench");
   const response = await withTimeout(agent.generate(prompt, { maxSteps: 1 }), "Gemma");
-  return { raw: await response.text, model: process.env.OLLAMA_MODEL ?? "gemma3:4b" };
+  return { raw: await response.text, model: ollamaModelId() };
 }
 
 async function tunedBrief(prompt: string, checkpoint: string): Promise<DraftBrief> {

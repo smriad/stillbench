@@ -8,6 +8,7 @@ import { dataFile } from "./paths";
 import { countExportableWalks, TINKER_EXPORT_MIN } from "./walk-qualify";
 import { readAllWalks } from "./store";
 import { tabpfnReady } from "./tabpfn";
+import { gemmaInferenceReady, ollamaApiKey, ollamaBaseUrl, ollamaModelId, ollamaRemote } from "./ollama-env";
 import { TASK_QUEUE, temporalConnectionOptions, temporalEnabled } from "./temporal-config";
 
 export type IntegrationState = "on" | "set" | "off" | "error";
@@ -56,23 +57,13 @@ function ago(timestamp: number) {
   return `${Math.round(seconds / 3600)} h ago`;
 }
 
-function ollamaRemote() {
-  const url = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1";
-  const host = new URL(url).hostname;
-  return {
-    url,
-    host,
-    remote: !["127.0.0.1", "localhost", "::1"].includes(host),
-    droplet: host.endsWith(".sslip.io"),
-  };
-}
-
 async function gemma(): Promise<Integration> {
-  const { url, host, remote, droplet } = ollamaRemote();
+  const url = ollamaBaseUrl();
+  const { host, remote, droplet } = ollamaRemote();
   const where = droplet ? "the droplet" : remote ? host : "this machine";
-  const model = process.env.OLLAMA_MODEL ?? "gemma3:4b";
+  const model = ollamaModelId();
   const base = { name: "Gemma", role: "Writes the spoken brief, on open weights" };
-  if (remote && !process.env.OLLAMA_API_KEY) {
+  if (remote && !gemmaInferenceReady()) {
     return {
       ...base,
       state: "off",
@@ -83,7 +74,7 @@ async function gemma(): Promise<Integration> {
   try {
     const response = await within(
       fetch(`${url.replace(/\/$/, "")}/models`, {
-        headers: { Authorization: `Bearer ${process.env.OLLAMA_API_KEY ?? "ollama"}` },
+        headers: { Authorization: `Bearer ${ollamaApiKey() ?? "ollama"}` },
         cache: "no-store",
       }),
     );
