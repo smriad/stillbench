@@ -1,5 +1,7 @@
 # Stillbench
 
+**Live demo:** [https://stillbench.onrender.com](https://stillbench.onrender.com) · **Repo:** [github.com/smriad/stillbench](https://github.com/smriad/stillbench)
+
 Sit outside for twelve minutes. Stillbench picks a nearby bench, speaks a short departure brief, then times your sit while the phone stays in your pocket.
 
 Before you go, you can name who the sit is for — a person, a day, or leave it blank. The brief says it once. The home screen remembers the last bench. After you sit, the prompt asks what was here that is not a screen. None of that appears during the sit. The timer stays the only thing on the screen.
@@ -40,7 +42,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). **This sit is for** is optional. **Take me outside** is the real twelve-minute sit. **The street is too much** is six minutes at the closest bench. **Sit with someone** adds a line you can play for the person next to you. **Practice sit, twenty seconds** is the same walk with a short timer. Practice sits are not used as training data.
+Try the [hosted demo](https://stillbench.onrender.com) (free tier may sleep; first load can take ~1 minute) or run locally at [http://localhost:3000](http://localhost:3000). **This sit is for** is optional. **Take me outside** is the real twelve-minute sit. **The street is too much** is six minutes at the closest bench. **Sit with someone** adds a line you can play for the person next to you. **Practice sit, twenty seconds** is the same walk with a short timer. Practice sits are not used as training data.
 
 Everything in `.env.example` beyond Ollama is optional. Each key turns on one piece, and the walk keeps working without it. [http://localhost:3000/integrations](http://localhost:3000/integrations) shows which ones are on, which are broken, and what to do next.
 
