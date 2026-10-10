@@ -675,7 +675,7 @@ export function WalkApp() {
           {afterSitLine({
             need: walk.need ?? "outside",
             practice: walk.practice,
-            lastBailed: walk.lastBailed,
+            lastBailed: walk.lastBailed ?? false,
             streak,
             minutesThisWeek,
             dedication: walk.dedication,

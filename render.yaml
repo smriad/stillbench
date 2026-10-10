@@ -19,7 +19,7 @@ services:
       - key: OLLAMA_API_KEY
         sync: false
       - key: OLLAMA_MODEL
-        value: gemma3:4b
+        value: google/gemma-3-4b-it
       # Render's disk is wiped on every deploy, so walks and attempts belong in Atlas.
       - key: MONGODB_URI
         sync: false
