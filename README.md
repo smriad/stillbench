@@ -1,39 +1,64 @@
 # Stillbench
 
-**Live demo:** [https://stillbench.onrender.com](https://stillbench.onrender.com) · **Repo:** [github.com/smriad/stillbench](https://github.com/smriad/stillbench)
+**Live demo:** [stillbench.onrender.com](https://stillbench.onrender.com) · **Integrations:** [/integrations](https://stillbench.onrender.com/integrations) · **DEV submission (Week 1 — Touch Grass):** [draft on DEV](https://dev.to/smriad/stillbench-open-gemma-tabpfn-for-twelve-minutes-outside-touch-grass-49l-temp-slug-2358043) · **Repo:** [github.com/smriad/stillbench](https://github.com/smriad/stillbench)
 
-Sit outside for twelve minutes. Stillbench picks a nearby bench, speaks a short departure brief, then times your sit while the phone stays in your pocket.
+Sit outside for **twelve minutes**. Stillbench picks a nearby bench, speaks a short **Gemma** brief once, then times your sit while the phone stays in your pocket. It is not a quest app, a streak game, or a garden planner—the screen is the short part; the sit is the product.
 
-Before you go, you can name who the sit is for — a person, a day, or leave it blank. The brief says it once. The home screen remembers the last bench. After you sit, the prompt asks what was here that is not a screen. None of that appears during the sit. The timer stays the only thing on the screen.
+Optional **This sit is for…** names who the sit is for. TabPFN shows a plain **why this bench** line (light, last bail, leave probability). **Take me outside** is twelve minutes. **The street is too much** is six minutes at the closest bench (the roof counts). **Sit with someone** adds a line you can play for the person next to you. Check-in text shares a **return time, not GPS**. Afterward: one noticing prompt, optional debrief for the next visitor, and **Copy sit story (markdown)** on the done screen. **Practice sit, twenty seconds** is the same flow and is not training data.
 
-If the street is too much, a six-minute sit at the closest bench still counts — the roof is in the pool on purpose. If you are going with someone, the brief includes one line for them, and you can send a check-in with a time and no GPS.
+Briefs can mention the air outside when `STILLBENCH_HOME` is set (Open-Meteo). The latest brief and voice file can stay on the phone for offline replay.
 
-After each real sit you can confirm you were at the bench, and optionally share one line of debrief for the next visitor. The latest brief and voice file stay on the phone for offline replay. Briefs can mention the air outside when `STILLBENCH_HOME` is set (Open-Meteo, no extra key).
+## Demo (about sixty seconds)
 
-Stillbench picks a nearby bench, tells you in plain language why that bench fits today (light, last bail, TabPFN scores), speaks a short Gemma brief, and keeps a quiet timer while you sit. Afterward you can copy a markdown **sit story** for a DEV post—still no GPS. A chime tells you when it is done. Afterwards you say one line about what you noticed, and the next brief remembers it. The screen is the short part. The sit is the product.
+On your phone: open the [live demo](https://stillbench.onrender.com) → optional dedication → **Take me outside** → listen once → **I'm leaving** → **I'm sitting** → pocket the phone until the chime. Free tier may sleep; first load after idle can take ~1 minute. Check [/integrations](https://stillbench.onrender.com/integrations) for partner status on production.
 
-## How a walk works
+## How it is built
+
+Open-source AI is the spine:
+
+1. **Mastra** workflow `depart` — read sky → **TabPFN** scores benches → pick bench → **Gemma** writes the brief → save walk → optional ElevenLabs voice.
+2. **Gemma** (`google/gemma-3-4b-it`) via OpenRouter on Render, or **Ollama** locally (`gemma3:4b`). If inference fails, a built-in composer still gets you outside (`src/lib/ollama-env.ts` treats blank `OLLAMA_API_KEY` on remote hosts as unset).
+3. **TabPFN** (Prior Labs) forecasts leave probability per bench from walk history and picks the farthest bench you are still likely to walk to.
+4. **Tinker** (optional): half the briefs from a model tuned on sits that finished (`npm run train:briefs`).
+5. **SerpApi** at build time adds real parks near `STILLBENCH_HOME` (coordinates are not sent per walk).
+6. **MongoDB Atlas** on Render stores walks and integration health; **Tiger Data** logs sit events; **Backboard** may echo one debrief line into the next brief.
+7. **Sentry** — `@mastra/sentry` with `SENTRY_DSN`; agent, TabPFN, and ElevenLabs spans (see `docs/submission-screenshots/06-sentry-integrations.png`).
 
 ```mermaid
 flowchart LR
-  tap[Take me outside] --> sky[read-sky<br/>clock, light, last bail]
-  sky --> score[forecast-benches<br/>TabPFN scores every bench]
-  score --> pick[pick-bench<br/>farthest you will still walk to]
-  pick --> brief[write-brief<br/>Gemma 3 4B on Ollama]
-  brief --> speak[save-and-speak<br/>ElevenLabs voice]
-  speak --> timer[Temporal walk workflow<br/>durable sit timer]
-  timer --> chime[chime and pebble buzz]
-  chime --> note[spoken debrief<br/>ElevenLabs Scribe]
-  note -. next brief remembers .-> brief
-  timer -. sat or bailed .-> rows[(attempts)]
-  rows -. trains .-> score
+  tap[Take me outside] --> sky[read-sky]
+  sky --> score[forecast-benches TabPFN]
+  score --> pick[pick-bench]
+  pick --> brief[write-brief Gemma]
+  brief --> speak[ElevenLabs voice optional]
+  speak --> timer[phone timer]
+  timer --> note[one-line notice]
+  note -.-> brief
 ```
 
-The five steps from the tap to the brief are a Mastra workflow (`src/mastra/workflows/depart.ts`). Each finished or abandoned walk becomes one more row that TabPFN learns from.
+Start in code: `src/mastra/workflows/depart.ts`, then `src/lib/forecast.ts`, `src/lib/write-brief.ts`, `src/app/walk-app.tsx`.
 
-## Run it
+## Why open innovation matters
 
-Gemma 3 4B needs to be available in Ollama:
+Closed wellness apps could nag you to go outside. Stillbench needs open pieces to **swap the brief model**, **train on your own bails**, **keep GPS off the server** while personalizing distance, and **run the departure agent** on a harness you can read (Mastra).
+
+| Open piece | What it does |
+| --- | --- |
+| **Gemma** | Spoken departure brief on open weights |
+| **TabPFN** | Bench choice from tabular walk history |
+| **Mastra** | Five-step `depart` workflow |
+| **Tinker** | Briefs tuned on sits that finished |
+| **MongoDB Atlas** | Walks off ephemeral Render disk |
+
+ElevenLabs is optional closed voice on top; the open stack still works without it.
+
+## Real sit (Touch Grass)
+
+Production walk: **Banani Block C Park** (SerpApi park in the pool), twelve minutes, dedication *Hacktoberfest Week 1*, debrief *Generator hum from the club wall and someone washing a car two streets over.* UI screenshots in `docs/submission-screenshots/` (bench/timer from the same app the same evening; area photo [CC BY 2.0 ASaber91](https://commons.wikimedia.org/wiki/File:Banani,_Dhaka_(29590964616).jpg)).
+
+**Build log:** [DevRelay agent session #704](https://dev.to/agent_sessions/stillbench-touch-grass-hf26-gemma-tabpfn-render-deploy-s3xzgs) (curated; publish on DEV if you embed it in a post).
+
+## Run it locally
 
 ```bash
 ollama pull gemma3:4b
@@ -42,67 +67,52 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Try the [hosted demo](https://stillbench.onrender.com) (free tier may sleep; first load can take ~1 minute) or run locally at [http://localhost:3000](http://localhost:3000). **This sit is for** is optional. **Take me outside** is the real twelve-minute sit. **The street is too much** is six minutes at the closest bench. **Sit with someone** adds a line you can play for the person next to you. **Practice sit, twenty seconds** is the same walk with a short timer. Practice sits are not used as training data.
-
-Everything in `.env.example` beyond Ollama is optional. Each key turns on one piece, and the walk keeps working without it. [http://localhost:3000/integrations](http://localhost:3000/integrations) shows which ones are on, which are broken, and what to do next.
+Open [http://localhost:3000](http://localhost:3000). Everything in `.env.example` beyond Ollama is optional. [/integrations](http://localhost:3000/integrations) probes partners on load (on / set / broken / off). Integration health persists in MongoDB when `MONGODB_URI` is set.
 
 | Piece | Turn it on | What changes |
 | --- | --- | --- |
-| TabPFN | `PRIORLABS_API_KEY` | Bench choice comes from TabPFN instead of a nearest-neighbour baseline |
-| ElevenLabs | `ELEVENLABS_API_KEY` | Brief voice, generated chime, spoken debrief |
-| Temporal | `TEMPORAL_ADDRESS`, then `npm run temporal:dev` and `npm run worker` | The server finishes the sit even if the phone sleeps, and closes walks you never started |
-| Sentry | `SENTRY_DSN` | Agent and workflow traces from Mastra, plus TabPFN, ElevenLabs and Tinker spans |
-| MongoDB Atlas | `MONGODB_URI` | Walks and attempts move off local disk, which Render needs |
-| SerpApi | `SERPAPI_API_KEY`, `STILLBENCH_HOME`, then `npm run benches:find` | Real parks near home join the hand-picked benches |
-| Tinker | `TINKER_API_KEY`, `TINKER_BRIEF_MODEL` | Half the briefs come from a model tuned on the briefs that got you to sit |
-| Arduino | `STILLBENCH_DEVICE_TOKEN` | The pocket pebble in `hardware/` buzzes when the sit ends |
-| Backboard | `BACKBOARD_API_KEY`, `BACKBOARD_ASSISTANT_ID` | Remembers debriefs; may echo one line in the next Gemma brief |
-| Tiger Data | `TIGER_DATABASE_URL` | Append-only `sit_events` in Timescale for analytics |
+| Gemma | `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY` | Open-weight brief; composer fallback if inference fails |
+| TabPFN | `PRIORLABS_API_KEY` | Bench choice from TabPFN instead of baseline |
+| ElevenLabs | `ELEVENLABS_API_KEY` (`text_to_speech`, `sound_generation`, `speech_to_text`) | Brief voice, chime, spoken debrief |
+| Mastra / Sentry | `SENTRY_DSN` | Workflow + agent traces |
+| MongoDB Atlas | `MONGODB_URI` | Walks, attempts, integration health (required on Render) |
+| SerpApi | `SERPAPI_API_KEY`, `STILLBENCH_HOME`, `npm run benches:find` | Real parks in the bench pool |
+| Tinker | `TINKER_API_KEY`, `TINKER_BRIEF_MODEL` | ~50% of briefs from tuned model |
+| Backboard | `BACKBOARD_API_KEY`, `BACKBOARD_ASSISTANT_ID` | Debrief memory for next brief |
+| Tiger Data | `TIGER_DATABASE_URL` | `sit_events` in Timescale |
+| Temporal | `TEMPORAL_ADDRESS`, `npm run temporal:dev`, `npm run worker` | Durable server timer (optional) |
+| Arduino | `STILLBENCH_DEVICE_TOKEN` | UNO R4 WiFi pebble in `hardware/` |
 
-## What is saved, and where
+## What is saved
 
-Each finished sit or bail is appended to `data/attempts.csv` (created from `data/attempts.seed.csv` on first run), or to Atlas when `MONGODB_URI` is set. A row is the hour, how far the bench was, how much light was left, whether the last walk was a bail, and whether you sat. GPS is never read. The spoken debrief is sent to ElevenLabs for transcription and only the text is kept.
+Each sit or bail appends to `data/attempts.csv` (or Atlas with `MONGODB_URI`). Rows: hour, distance, light, last bail, whether you sat. GPS is never read. Debrief audio is transcribed by ElevenLabs; only text is kept.
 
-## Deploy
+## Deploy on Render
 
-### Render
+1. **New → Blueprint** → this repo (`render.yaml`, Node 22, `/api/health`).
+2. Env vars: dashboard, or `export RENDER_API_KEY=rnd_...` then `npx tsx scripts/sync-render-env.ts` (copies from `.env.local`).
+3. `MONGODB_URI` + IP allow list. `SERPAPI_API_KEY` + `STILLBENCH_HOME` for parks at build time.
+4. OpenRouter: `OLLAMA_BASE_URL=https://openrouter.ai/api/v1`, `OLLAMA_MODEL=google/gemma-3-4b-it`, non-empty `OLLAMA_API_KEY`.
+5. Temporal worker in `render.yaml` is commented out until Temporal Cloud + paid worker; phone keeps time by default.
 
-1. Push the repo to GitHub, then in Render choose **New > Blueprint** and pick the repo. `render.yaml` creates the `stillbench` web service on the free plan, running Node 22, with `/api/health` as its health check.
-2. Fill in the keys Render asks for. Every one is optional, and anything left empty falls back the same way it does locally. Check `/integrations` on the deployed URL to see what is live.
-3. Set `MONGODB_URI` (a free Atlas cluster is enough, with `0.0.0.0/0` on the IP allow list). Render's disk is wiped on every deploy, so without it the walk history resets. On a paid plan you can attach a Render disk instead and set `STILLBENCH_DATA_DIR` to its mount path.
-4. To use real parks, set `SERPAPI_API_KEY` and `STILLBENCH_HOME` in Render. Each build runs the park search, so your home never goes into the repo.
-5. Render cannot run Ollama. Point `OLLAMA_BASE_URL` at any OpenAI-compatible host that serves Gemma, such as OpenRouter (`https://openrouter.ai/api/v1`, `OLLAMA_MODEL=google/gemma-3-4b-it`, `OLLAMA_API_KEY` set to your OpenRouter key), or at the droplet below. Without one, briefs come from the built-in writer.
-6. The durable sit timer is commented out in `render.yaml`. It needs a paid background worker, Temporal Cloud (`TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_API_KEY`), and `MONGODB_URI` on both services. Leave the Temporal keys empty until then; the phone keeps time on its own.
+Alternative Gemma host: `deploy/digitalocean/cloud-init.yaml` (Ollama behind bearer token on `*.sslip.io`).
 
-The free plan sleeps after 15 idle minutes, so the first visit after that takes about a minute. The microphone debrief works on Render because it serves HTTPS.
-
-### DigitalOcean
-
-- `deploy/digitalocean/cloud-init.yaml` builds a droplet that serves Gemma through Ollama behind a bearer token, so the hosted demo still runs on open weights. Point `OLLAMA_BASE_URL` at `https://<droplet-ip>.sslip.io/v1` and set `OLLAMA_API_KEY` to the token.
-
-## The pebble
-
-`hardware/stillbench_pebble` is an Arduino UNO R4 WiFi sketch with a piezo on pin 8. It joins your phone's hotspot, polls `/api/device`, ticks once when you sit, and plays two notes when the twelve minutes are up. The phone can stay in the bag.
-
-## Tuning the brief with Tinker
-
-Real sits count for export when they finished (`status: sat`, not practice) and the brief is not tagged as the built-in template (`model` is not `composer`). If Gemma timed out, the brief may still be good but saved as `composer` — fix that in bulk:
+## Tinker training
 
 ```bash
-npm run qualify:walks   # relabel and fill in missing timestamps on real sits
-npm run seed:walks      # qualify first, then add fake full cycles until you have 8 exportable sits
-```
-
-Then export and train (creates `.venv`, installs Python deps, prints `TINKER_BRIEF_MODEL` to paste into `.env.local`):
-
-```bash
+npm run qualify:walks
+npm run seed:walks      # optional, until 8 exportable sits
 npm run train:briefs
 ```
-
-`/integrations` shows how many sits are exportable (`8` needed before training).
 
 ## Tests
 
 ```bash
 npm test
 ```
+
+## Hacktoberfest 2026
+
+Built for **[Week 1: Touch Grass](https://dev.to/challenges/hacktoberfest-week1-2026-10-05)** (`#hf26challenge`, `#devchallenge`). Partner stack on the [DEV write-up](https://dev.to/smriad/stillbench-open-gemma-tabpfn-for-twelve-minutes-outside-touch-grass-49l-temp-slug-2358043): Render, Gemma, TabPFN, Tinker, Mastra, MongoDB Atlas, SerpApi, ElevenLabs, Backboard, Tiger Data, Sentry Agent Tracing, Arduino (optional pebble).
+
+Submission assets: `docs/submission-screenshots/`.
