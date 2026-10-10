@@ -62,6 +62,34 @@ export async function readBriefAudio(walkId: string) {
   }
 }
 
+/** Short TTS call so /integrations can prove the key without a full depart. */
+export async function pingElevenLabsVoice() {
+  const key = apiKey();
+  if (!key) return false;
+
+  const voiceId = process.env.ELEVENLABS_VOICE_ID ?? "21m00Tcm4TlvDq8ikWAM";
+  const response = await fetch(`${API}/text-to-speech/${voiceId}`, {
+    method: "POST",
+    headers: {
+      "xi-api-key": key,
+      "Content-Type": "application/json",
+      Accept: "audio/mpeg",
+    },
+    body: JSON.stringify({
+      text: "Roof.",
+      model_id: "eleven_multilingual_v2",
+    }),
+  });
+
+  if (!response.ok) {
+    await recordHealth("tts", false, `ElevenLabs answered ${response.status}`);
+    return false;
+  }
+  await response.arrayBuffer();
+  await recordHealth("tts", true, "voiced a test line");
+  return true;
+}
+
 let chimeRefused = false;
 
 export async function chimeAudio() {

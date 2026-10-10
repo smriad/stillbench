@@ -116,7 +116,12 @@ async function tabpfn(): Promise<Integration> {
   if (!tabpfnReady(rows)) {
     return { ...base, state: "set", detail: `Key set, waiting for a sit and a bail (${rows.length} rows)` };
   }
-  const last = (await readHealth()).tabpfn;
+  let last = (await readHealth()).tabpfn;
+  if (!last) {
+    const { pingTabpfn } = await import("./tabpfn");
+    await within(pingTabpfn(rows), 20_000).catch(() => false);
+    last = (await readHealth()).tabpfn;
+  }
   if (!last) return { ...base, state: "set", detail: `Key set, ${rows.length} rows ready, not called yet` };
   return last.ok
     ? { ...base, state: "on", detail: `Last call ${ago(Date.parse(last.at))}: ${last.note}` }
@@ -133,7 +138,12 @@ async function elevenlabs(): Promise<Integration> {
   if (!process.env.ELEVENLABS_API_KEY) {
     return { ...base, state: "off", detail: "The phone's own voice reads the brief", fix: "Set ELEVENLABS_API_KEY" };
   }
-  const health = await readHealth();
+  let health = await readHealth();
+  if (!health.tts?.ok) {
+    const { pingElevenLabsVoice } = await import("./voice");
+    await within(pingElevenLabsVoice(), 15_000).catch(() => false);
+    health = await readHealth();
+  }
   const chimeCached = await exists(dataFile("audio", "chime.mp3"));
   const pieces: [string, HealthRecord | undefined, string][] = [
     ["Voice", health.tts, "text_to_speech"],
@@ -316,7 +326,9 @@ async function backboard(): Promise<Integration> {
     if (!ok) {
       return { ...base, state: "error", detail: "Assistant did not answer", fix: "Check BACKBOARD_ASSISTANT_ID" };
     }
-    return { ...base, state: "set", detail: "Connected, not used on a walk yet" };
+    const { recordHealth } = await import("./health");
+    await recordHealth("backboard", true, "assistant reachable");
+    return { ...base, state: "on", detail: "Assistant reachable, memories apply on the next brief" };
   } catch (error) {
     return { ...base, state: "error", detail: message(error), fix: "Check BACKBOARD_API_KEY" };
   }

@@ -47,6 +47,7 @@ services:
         sync: false
       - key: TIGER_DATABASE_URL
         sync: false
+      # Same values as .env.local — use scripts/sync-render-env.ts after setting RENDER_API_KEY
       # Leave the Temporal keys empty unless you also enable the worker below.
       - key: TEMPORAL_ADDRESS
         sync: false

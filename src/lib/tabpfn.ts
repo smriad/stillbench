@@ -175,3 +175,28 @@ export async function tabpfnLeaveProbabilities(
 
   return readLeaveProbabilities(result.prediction, queries.length);
 }
+
+export async function pingTabpfn(rows: AttemptRow[]) {
+  const apiKey = process.env.PRIORLABS_API_KEY;
+  if (!apiKey || !tabpfnReady(rows)) return false;
+  const query: LeaveQuery = {
+    hour: rows[0].hour,
+    minutesAway: rows[0].minutesAway,
+    lightMinutes: rows[0].lightMinutes,
+    lastBailed: rows[0].lastBailed,
+  };
+  try {
+    await tabpfnLeaveProbabilities(apiKey, rows, [query]);
+    const { recordHealth } = await import("./health");
+    await recordHealth("tabpfn", true, `scored 1 bench on ${rows.length} rows`);
+    return true;
+  } catch (error) {
+    const { recordHealth } = await import("./health");
+    await recordHealth(
+      "tabpfn",
+      false,
+      error instanceof Error ? error.message.slice(0, 180) : String(error),
+    );
+    return false;
+  }
+}
