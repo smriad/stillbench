@@ -1,0 +1,80 @@
+services:
+  - type: web
+    name: stillbench
+    runtime: node
+    # Free works for the demo; it sleeps after 15 idle minutes and wakes in about a minute.
+    plan: free
+    # The park search runs at build time so home stays out of the repo; it is skipped without the keys.
+    buildCommand: npm ci && npm run build && (npm run benches:find || true)
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Render cannot run Ollama. Any OpenAI-compatible host works: OpenRouter
+      # (https://openrouter.ai/api/v1 with OLLAMA_MODEL=google/gemma-3-4b-it), or the droplet from
+      # deploy/digitalocean/cloud-init.yaml. Leave unset and briefs come from the built-in writer.
+      - key: OLLAMA_BASE_URL
+        sync: false
+      - key: OLLAMA_API_KEY
+        sync: false
+      - key: OLLAMA_MODEL
+        value: gemma3:4b
+      # Render's disk is wiped on every deploy, so walks and attempts belong in Atlas.
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: stillbench
+      - key: PRIORLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: STILLBENCH_HOME
+        sync: false
+      - key: TINKER_API_KEY
+        sync: false
+      - key: TINKER_BRIEF_MODEL
+        sync: false
+      - key: BACKBOARD_API_KEY
+        sync: false
+      - key: BACKBOARD_ASSISTANT_ID
+        sync: false
+      - key: TIGER_DATABASE_URL
+        sync: false
+      # Leave the Temporal keys empty unless you also enable the worker below.
+      - key: TEMPORAL_ADDRESS
+        sync: false
+      - key: TEMPORAL_NAMESPACE
+        sync: false
+      - key: TEMPORAL_API_KEY
+        sync: false
+      - key: STILLBENCH_DEVICE_TOKEN
+        generateValue: true
+
+  # The durable sit timer. Background workers need a paid plan, Temporal Cloud,
+  # and MONGODB_URI, since the worker cannot see the web service's disk.
+  # Uncomment once those exist, then set the same TEMPORAL_* values on the web service.
+  #
+  # - type: worker
+  #   name: stillbench-walk-timer
+  #   runtime: node
+  #   plan: starter
+  #   buildCommand: npm ci
+  #   startCommand: npm run worker
+  #   envVars:
+  #     - key: NODE_VERSION
+  #       value: "22"
+  #     - key: MONGODB_URI
+  #       sync: false
+  #     - key: TEMPORAL_ADDRESS
+  #       sync: false
+  #     - key: TEMPORAL_NAMESPACE
+  #       sync: false
+  #     - key: TEMPORAL_API_KEY
+  #       sync: false

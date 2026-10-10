@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+.venv/
 /.pnp
 .pnp.*
 .yarn/*
@@ -30,8 +31,20 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# runtime walk data
+/data/walks.json
+/data/attempts.csv
+/data/audio/
+/data/tabpfn.json
+/data/benches.json
+/data/tinker/
+/data/health.json
 
 # vercel
 .vercel
@@ -39,3 +52,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# editor local history keeps copies of .env.local
+.history/
+
+# arduino
+/hardware/**/arduino_secrets.h

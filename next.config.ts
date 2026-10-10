@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: [
+    "@mastra/core",
+    "@mastra/observability",
+    "@mastra/sentry",
+    "@sentry/node",
+    "@temporalio/client",
+    "mongodb",
+    "pg",
+  ],
 };
 
 export default nextConfig;

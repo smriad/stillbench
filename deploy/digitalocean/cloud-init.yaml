@@ -1,0 +1,36 @@
+#cloud-config
+# Gemma 3 4B behind Ollama on a DigitalOcean droplet, for the hosted demo.
+# Replace CHANGE_ME with a long random token, then paste this file into
+# "User data" when you create the droplet (Ubuntu 24.04, 8 GB RAM or more).
+# The brief model is reachable at https://<droplet-ip>.sslip.io/v1 and only
+# answers requests that send "Authorization: Bearer <token>".
+
+write_files:
+  - path: /etc/stillbench/token
+    permissions: "0600"
+    content: CHANGE_ME
+  - path: /etc/systemd/system/ollama.service.d/override.conf
+    content: |
+      [Service]
+      Environment="OLLAMA_HOST=127.0.0.1:11434"
+      Environment="OLLAMA_KEEP_ALIVE=24h"
+
+runcmd:
+  - curl -fsSL https://ollama.com/install.sh | sh
+  - systemctl daemon-reload && systemctl restart ollama
+  - sleep 5 && ollama pull gemma3:4b
+  - apt-get update && apt-get install -y caddy
+  - |
+    IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+    TOKEN=$(cat /etc/stillbench/token)
+    cat > /etc/caddy/Caddyfile <<EOF
+    ${IP}.sslip.io {
+      @authorized header Authorization "Bearer ${TOKEN}"
+      handle @authorized {
+        reverse_proxy 127.0.0.1:11434
+      }
+      respond 401
+    }
+    EOF
+  - systemctl restart caddy
+  - ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable

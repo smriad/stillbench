@@ -6,21 +6,45 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/lib/stillbench.test.ts",
+    "worker": "tsx --env-file-if-exists=.env.local src/temporal/worker.ts",
+    "temporal:dev": "docker compose up temporal",
+    "benches:find": "tsx --env-file-if-exists=.env.local scripts/find-benches.ts",
+    "backboard:assistant": "tsx --env-file-if-exists=.env.local scripts/create-backboard-assistant.ts",
+    "qualify:walks": "tsx --env-file-if-exists=.env.local scripts/qualify-walks.ts",
+    "seed:walks": "tsx --env-file-if-exists=.env.local scripts/seed-real-cycles.ts",
+    "train:briefs": "tsx --env-file-if-exists=.env.local scripts/train-briefs.ts"
   },
   "dependencies": {
+    "@mastra/core": "^1.74.0",
+    "@mastra/observability": "^1.18.3",
+    "@mastra/sentry": "^1.2.23",
+    "@sentry/node": "^10.76.0",
+    "@temporalio/activity": "^1.24.0",
+    "@temporalio/client": "^1.24.0",
+    "@temporalio/worker": "^1.24.0",
+    "@temporalio/workflow": "^1.24.0",
+    "mongodb": "^7.7.0",
     "next": "16.3.8",
+    "pg": "^8.23.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.9"
   }
 }
